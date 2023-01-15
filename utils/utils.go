@@ -1,5 +1,4 @@
-// This file is an old version what only download an specific version and checksum.
-package old
+package utils
 
 import (
 	"archive/tar"
@@ -7,28 +6,51 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 )
 
 const (
-	URL      = "https://go.dev/dl/go1.19.4.linux-amd64.tar.gz"
-	CHECKSUM = "c9c08f783325c4cf840a94333159cc937f05f75d36a8b307951d5bd959cf2ab8"
+	allowedDomain  = "go.dev"
+	downloadUrl    = "https://go.dev/dl/"
+	linuxExtFile   = "tar.gz"
+	windowsExtFile = "zip"
 )
 
-func downloadFile() error {
-	tmp := os.TempDir()
+func SystemDist() string {
+	return fmt.Sprintf("%s-%s", runtime.GOOS, runtime.GOARCH)
+}
 
-	file, err := os.Create(tmp + "/go1.19.4.linux-amd64.tar.gz")
+func ExtFile() string {
+	var ext string
+
+	switch runtime.GOOS {
+	case "linux":
+		ext = linuxExtFile
+	case "windows":
+		ext = windowsExtFile
+	case "darwin":
+		ext = ""
+	}
+
+	return ext
+}
+
+func DownloadFile(fileName, url string) error {
+	tmpPath := filepath.Join(os.TempDir(), fileName)
+
+	file, err := os.Create(tmpPath)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
 
-	res, err := http.Get(URL)
+	res, err := http.Get(url)
 	if err != nil {
 		return err
 	}
@@ -42,27 +64,36 @@ func downloadFile() error {
 	return nil
 }
 
-func matchChecksum() error {
-	file, err := os.ReadFile("/tmp/go1.19.4.linux-amd64.tar.gz")
+func MatchChecksum(fileName, checksum string) error {
+	file, err := os.ReadFile(fileName)
 	if err != nil {
 		return err
 	}
 
-	checksum := sha256.Sum256(file)
-
-	if hex.EncodeToString(checksum[:]) != CHECKSUM {
+	fileChecksum := sha256.Sum256(file)
+	if hex.EncodeToString(fileChecksum[:]) != checksum {
 		return errors.New("checksums not match")
 	}
 
 	return nil
 }
 
-func removeAndInstall() error {
-	err := os.RemoveAll("/usr/local/go")
+func Remove() error {
+	goRoot, err := exec.Command("go", "env", "GOROOT").Output()
 	if err != nil {
 		return err
 	}
 
+	err = os.RemoveAll(string(goRoot))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Update tmp file, gzipreader names.
+func Install() error {
 	file, err := os.Open("/tmp/go1.19.4.linux-amd64.tar.gz")
 	if err != nil {
 		return err
@@ -84,6 +115,7 @@ func removeAndInstall() error {
 
 			return err
 		}
+
 		switch header.Typeflag {
 		case tar.TypeDir:
 			if err = os.Mkdir("/usr/local/"+header.Name, 0755); err != nil {
@@ -106,27 +138,4 @@ func removeAndInstall() error {
 	}
 
 	return nil
-}
-
-func Old() {
-	// Download new version
-	err := downloadFile()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Match checksums
-	err = matchChecksum()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Remove previous installation and install new version
-	err = removeAndInstall()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	exec.Command("ls", "-a")
-	// check path
 }

@@ -5,42 +5,16 @@ import (
 	"log"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
 
+	"github.com/Patrick564/update-go-script/utils"
 	colly "github.com/gocolly/colly/v2"
 )
 
 const (
-	allowedDomain  = "go.dev"
-	downloadUrl    = "https://go.dev/dl/"
-	linuxExtFile   = "tar.gz"
-	windowsExtFile = "zip"
+	allowedDomain = "go.dev"
+	downloadUrl   = "https://go.dev/dl/"
 )
-
-// goPath, err := exec.Command("go", "env", "GOPATH").Output()
-// if err != nil {
-// 	log.Fatalf("error at getting Go path: %v", err)
-// }
-
-func systemDist() string {
-	return fmt.Sprintf("%s-%s", runtime.GOOS, runtime.GOARCH)
-}
-
-func extFile() string {
-	var ext string
-
-	switch runtime.GOOS {
-	case "linux":
-		ext = linuxExtFile
-	case "windows":
-		ext = windowsExtFile
-	case "darwin":
-		ext = ""
-	}
-
-	return ext
-}
 
 // Show commands for use.
 func defaultCmd() {
@@ -80,7 +54,7 @@ func listRemoteCmd(c *colly.Collector) {
 	c.OnHTML(".filename", func(h *colly.HTMLElement) {
 		link := h.ChildAttr(".download", "href")
 
-		if strings.Contains(link, systemDist()) {
+		if strings.Contains(link, utils.SystemDist()) {
 			links = append(links, link)
 		}
 	})
@@ -92,7 +66,7 @@ func listRemoteCmd(c *colly.Collector) {
 }
 
 func installCmd(version string) {
-	fmt.Println(downloadUrl, version, systemDist(), extFile())
+	fmt.Println(downloadUrl, version, utils.SystemDist(), utils.ExtFile())
 }
 
 func main() {
