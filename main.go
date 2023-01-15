@@ -11,10 +11,36 @@ import (
 	colly "github.com/gocolly/colly/v2"
 )
 
+const (
+	allowedDomain  = "go.dev"
+	downloadUrl    = "https://go.dev/dl/"
+	linuxExtFile   = "tar.gz"
+	windowsExtFile = "zip"
+)
+
 // goPath, err := exec.Command("go", "env", "GOPATH").Output()
 // if err != nil {
 // 	log.Fatalf("error at getting Go path: %v", err)
 // }
+
+func systemDist() string {
+	return fmt.Sprintf("%s-%s", runtime.GOOS, runtime.GOARCH)
+}
+
+func extFile() string {
+	var ext string
+
+	switch runtime.GOOS {
+	case "linux":
+		ext = linuxExtFile
+	case "windows":
+		ext = windowsExtFile
+	case "darwin":
+		ext = ""
+	}
+
+	return ext
+}
 
 // Show commands for use.
 func defaultCmd() {
@@ -24,11 +50,15 @@ func defaultCmd() {
 	fmt.Print("  goit <command>\n")
 
 	fmt.Print("\nCOMMANDS:\n")
-	fmt.Print("  current:     Get the current installed version of Go\n")
-	fmt.Print("  list-remote: Get the current installed version of Go\n")
-	fmt.Print("  install:     Get the current installed version of Go\n")
+	fmt.Print("  current:     Get the current installed version of Go.\n")
+	fmt.Print("  list-remote: List all Go versions avaiable for your syhstem distribution.\n")
+	fmt.Print("  install:     Install the indicated version fo Go.\n")
 
 	fmt.Println()
+}
+
+func helpCmd() {
+	fmt.Println("Command unknow, type `goit` or `goit help` for see all commands avaiable.")
 }
 
 // Get the current installed Go version.
@@ -45,17 +75,16 @@ func currentCmd() {
 
 func listRemoteCmd(c *colly.Collector) {
 	links := make([]string, 0)
-	system := fmt.Sprintf("%s-%s", runtime.GOOS, runtime.GOARCH)
 	replacer := strings.NewReplacer("/dl/", "", ".linux-amd64.tar.gz", "")
 
 	c.OnHTML(".filename", func(h *colly.HTMLElement) {
 		link := h.ChildAttr(".download", "href")
 
-		if strings.Contains(link, system) {
+		if strings.Contains(link, systemDist()) {
 			links = append(links, link)
 		}
 	})
-	c.Visit("https://go.dev/dl/")
+	c.Visit(downloadUrl)
 
 	for _, l := range links[:3] {
 		fmt.Println(replacer.Replace(l))
@@ -63,16 +92,16 @@ func listRemoteCmd(c *colly.Collector) {
 }
 
 func installCmd(version string) {
-	fmt.Println(version)
+	fmt.Println(downloadUrl, version, systemDist(), extFile())
 }
 
 func main() {
 	args := os.Args
 	c := colly.NewCollector(
-		colly.AllowedDomains("go.dev"),
+		colly.AllowedDomains(allowedDomain),
 	)
 
-	if len(args) == 1 {
+	if len(args) == 1 || args[1] == "help" {
 		defaultCmd()
 		return
 	}
@@ -91,4 +120,6 @@ func main() {
 		installCmd(args[2])
 		return
 	}
+
+	helpCmd()
 }
