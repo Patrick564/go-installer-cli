@@ -66,6 +66,22 @@ func listRemoteCmd(c *colly.Collector) {
 }
 
 func installCmd(version string) {
+	err := utils.Remove()
+	if err != nil {
+		log.Fatalf("error at remove previous installation: %v", err)
+	}
+
+	goVersionFilename := fmt.Sprintf("%s.%s.%s", version, utils.SystemDist(), utils.ExtFile())
+	err = utils.DownloadUrl(goVersionFilename)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
+
+	err = utils.Install()
+	if err != nil {
+		log.Fatalf("aaaaaa: %v", err)
+	}
+
 	fmt.Println(downloadUrl, version, utils.SystemDist(), utils.ExtFile())
 }
 

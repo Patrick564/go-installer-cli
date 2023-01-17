@@ -16,10 +16,10 @@ import (
 )
 
 const (
-	allowedDomain  = "go.dev"
-	downloadUrl    = "https://go.dev/dl/"
-	linuxExtFile   = "tar.gz"
-	windowsExtFile = "zip"
+	goUrlDomain      = "go.dev"
+	installationPath = "/usr/local/"
+	linuxExtFile     = "tar.gz"
+	windowsExtFile   = "zip"
 )
 
 func SystemDist() string {
@@ -34,14 +34,15 @@ func ExtFile() string {
 		ext = linuxExtFile
 	case "windows":
 		ext = windowsExtFile
-	case "darwin":
+	default:
 		ext = ""
 	}
 
 	return ext
 }
 
-func DownloadFile(fileName, url string) error {
+func DownloadUrl(fileName string) error {
+	url := fmt.Sprintf("https://%s/dl/%s", goUrlDomain, fileName)
 	tmpPath := filepath.Join(os.TempDir(), fileName)
 
 	file, err := os.Create(tmpPath)
@@ -118,11 +119,12 @@ func Install() error {
 
 		switch header.Typeflag {
 		case tar.TypeDir:
-			if err = os.Mkdir("/usr/local/"+header.Name, 0755); err != nil {
+			err := os.Mkdir(installationPath+header.Name, 0755)
+			if err != nil {
 				return errors.New("error at create go file")
 			}
 		case tar.TypeReg:
-			file, err := os.Create("/usr/local/" + header.Name)
+			file, err := os.Create(installationPath + header.Name)
 			if err != nil {
 				return err
 			}
