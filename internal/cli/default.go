@@ -2,7 +2,7 @@ package cli
 
 import "fmt"
 
-// Show all commands aviable for the CLI.
+// Show all commands available for the CLI.
 func Default() {
 	fmt.Print("This a CLI app to detect your Go version and install a new deleting previous.\n")
 
